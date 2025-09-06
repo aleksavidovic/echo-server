@@ -4,20 +4,41 @@
 #include <unistd.h>		// For read(), write(), close()
 #include <sys/socket.h>
 #include <arpa/inet.h>
+#include <pthread.h>
 
 #define BUFFER_SIZE 100
 
-/*	struct sockaddr_in {
-		short			sin_family;		// e.g. AF_INET
-		unsigned short	sin_port;		// Port number
-		struct in_addr	sin_addr;		// IP address
-		char			sin_zero[8];	// Not used, just for padding
-};*/
 
+void* handle_client(void* arg) {
+	int *client_sock_ptr = (int *)arg;
+	int client_sockfd = *client_sock_ptr;
+	free(client_sock_ptr);
+
+	char buffer[BUFFER_SIZE];
+
+	size_t received_bytes;
+	if ( (received_bytes = read(client_sockfd, buffer, BUFFER_SIZE) ) < 0 ) {
+		perror("Error receiving data on socket");
+		return NULL;
+	} else {
+		printf("Received data: [%s]\n", buffer);
+	}
+
+	if ( write(client_sockfd, buffer, received_bytes) < 0 ) {
+		perror("ERROR sending data");
+		return NULL;
+	}
+
+	if ( close(client_sockfd) < 0 ) {
+		perror("ERROR closing the socket");
+		return NULL;
+	}
+	return (void*)"Connection closed successfully.";
+}
 
 int main(void) {
 	int sockfd;
-	char buffer[BUFFER_SIZE];
+	pthread_t client_handler_thread;
 
 	if ( (sockfd = socket(AF_INET, SOCK_STREAM, 0)) < 0 ) {
 		perror("ERROR opening socket");
@@ -51,33 +72,22 @@ int main(void) {
 		printf("Listening...\n");
 	}
 
-	size_t received_bytes;
 	while(1) {
 		client_len = sizeof(client_addr);
 		client_sockfd = accept(sockfd, (struct sockaddr *)&client_addr, &client_len);
-
+		
 		if (client_sockfd < 0) {
 			perror("ERROR accepting connection");
 		} else {
 			printf("Connection accepted successfully.\n");
 		}
 
-		if ( (received_bytes = read(client_sockfd, buffer, BUFFER_SIZE) ) < 0 ) {
-			perror("Error receiving data on socket");
-			exit(1);
-		} else {
-			printf("Received data: [%s]\n", buffer);
-		}
+		int *new_sock = (int *)malloc(sizeof(int));
+		*new_sock = client_sockfd;
 
-		if ( write(client_sockfd, buffer, received_bytes) < 0 ) {
-			perror("ERROR sending data");
-			exit(1);
-		}
+		pthread_create(&client_handler_thread, NULL, handle_client, (void*)new_sock);
 
-		if ( close(client_sockfd) < 0 ) {
-			perror("ERROR closing the socket");
-			exit(1);
-		}
+
 	}
 
 	return 0;

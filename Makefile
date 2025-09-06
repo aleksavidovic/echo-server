@@ -1,13 +1,13 @@
 # Compiler and flags
 CC = gcc
-CFLAGS = -Wall -Wextra -Iinclude -std=c11
-LIBS = -lSDL2
+CFLAGS = -Wall -Wextra -Iinclude -std=c11 
+LIBS = -lSDL2 -pthread
 
 # Project structure
 SRCDIR = src
 INCDIR = include
 BUILDDIR = build
-TARGET = $(BUILDDIR)/chip8_emulator
+TARGET = $(BUILDDIR)/echo-server
 
 # Find all .c source files in the src directory
 SOURCES = $(wildcard $(SRCDIR)/*.c)
